@@ -161,11 +161,17 @@ if (typeof document !== "undefined") {
       f.name === "" || f.name == null || true;
   }
 
+  // 同一日判定用のキー(年月日)
+  const dayKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+
   // ---- 画像読み込み ----
   async function handleFiles(fileList) {
     const all = Array.from(fileList);
     if (!all.length) return; // ピッカーをキャンセルした場合
     const files = all.filter(isImageFile);
+
+    // 既に取り込み済みの日付(複数バッチでも「最初の1枚」を維持)
+    const seen = new Set(state.photos.map((p) => dayKey(p.date)));
 
     showNotice("");
     showProgress(true);
@@ -173,15 +179,24 @@ if (typeof document !== "undefined") {
     let processed = 0;
     let added = 0;
     let failed = 0;
+    let duplicates = 0;
 
     for (const file of files) {
       try {
-        const info = await readPhoto(file);
-        if (info) {
-          state.photos.push(info);
-          added++;
+        // 先に撮影日だけ取得し、同じ日が既にあれば重い処理をせずスキップ
+        const { taken, usedExif } = await readTakenDate(file);
+        const key = dayKey(taken);
+        if (seen.has(key)) {
+          duplicates++; // 同じ日は最初に選んだ1枚だけ採用
         } else {
-          failed++;
+          const thumb = await makeThumbnail(file);
+          if (thumb) {
+            seen.add(key);
+            state.photos.push({ date: taken, name: file.name, thumb, file, usedExif });
+            added++;
+          } else {
+            failed++;
+          }
         }
       } catch (_) {
         failed++; // 壊れた画像などはスキップ
@@ -196,18 +211,21 @@ if (typeof document !== "undefined") {
     rebuild();
 
     // 無反応にならないよう、必ず結果を知らせる
+    const parts = [];
+    if (duplicates) parts.push(`同じ日の重複${duplicates}枚は最初の1枚のみ採用`);
+    if (failed) parts.push(`${failed}枚は読み込めずスキップ`);
     if (added === 0) {
       showNotice(
-        "写真を読み込めませんでした。もう一度お試しいただくか、別の写真を選んでください。" +
-        (failed ? `(${failed}枚をスキップ)` : "")
+        "追加できる写真がありませんでした。" +
+        (parts.length ? `(${parts.join(" / ")})` : "別の写真を選んでください。")
       );
-    } else if (failed > 0) {
-      showNotice(`${added}枚を追加しました(${failed}枚は読み込めずスキップ)。`);
+    } else if (parts.length) {
+      showNotice(`${added}枚を追加しました(${parts.join(" / ")})。`);
     }
   }
 
-  async function readPhoto(file) {
-    // 先頭部分だけ読んで EXIF を高速に取得(失敗してもファイル日時で継続)
+  // 撮影日時だけを取得(EXIF 優先、無ければファイル日時)
+  async function readTakenDate(file) {
     let dateStr = null;
     try {
       const head = await file.slice(0, 256 * 1024).arrayBuffer();
@@ -216,11 +234,7 @@ if (typeof document !== "undefined") {
       /* EXIF 読めず → ファイル日時にフォールバック */
     }
     const parsed = parseExifDateString(dateStr);
-    const usedExif = !!parsed;
-    const taken = parsed || new Date(file.lastModified || Date.now());
-    const thumb = await makeThumbnail(file);
-    if (!thumb) return null;
-    return { date: taken, name: file.name, thumb, file, usedExif };
+    return { taken: parsed || new Date(file.lastModified || Date.now()), usedExif: !!parsed };
   }
 
   // 画像ソースを縮小して JPEG データURLに変換
