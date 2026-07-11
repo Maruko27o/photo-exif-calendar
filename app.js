@@ -153,71 +153,147 @@ if (typeof document !== "undefined") {
     });
   });
 
+  // 画像ファイルとみなすか。iOS では HEIC/iCloud 写真の type が空になることがあり、
+  // type だけで弾くと写真が全部除外されてしまうため、type が空でも受け付ける。
+  function isImageFile(f) {
+    if (f.type) return f.type.startsWith("image/");
+    return /\.(jpe?g|png|heic|heif|webp|gif|bmp|tiff?)$/i.test(f.name || "") ||
+      f.name === "" || f.name == null || true;
+  }
+
   // ---- 画像読み込み ----
   async function handleFiles(fileList) {
-    const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
-    if (!files.length) return;
+    const all = Array.from(fileList);
+    if (!all.length) return; // ピッカーをキャンセルした場合
+    const files = all.filter(isImageFile);
 
+    showNotice("");
     showProgress(true);
     setProgress(0, files.length);
     let processed = 0;
+    let added = 0;
+    let failed = 0;
 
     for (const file of files) {
       try {
         const info = await readPhoto(file);
-        if (info) state.photos.push(info);
+        if (info) {
+          state.photos.push(info);
+          added++;
+        } else {
+          failed++;
+        }
       } catch (_) {
-        /* 壊れた画像はスキップ */
+        failed++; // 壊れた画像などはスキップ
       }
       processed++;
       setProgress(processed, files.length);
       // UI をブロックしないよう小休止
-      if (processed % 5 === 0) await new Promise((r) => setTimeout(r, 0));
+      if (processed % 3 === 0) await new Promise((r) => setTimeout(r, 0));
     }
 
     showProgress(false);
     rebuild();
+
+    // 無反応にならないよう、必ず結果を知らせる
+    if (added === 0) {
+      showNotice(
+        "写真を読み込めませんでした。もう一度お試しいただくか、別の写真を選んでください。" +
+        (failed ? `(${failed}枚をスキップ)` : "")
+      );
+    } else if (failed > 0) {
+      showNotice(`${added}枚を追加しました(${failed}枚は読み込めずスキップ)。`);
+    }
   }
 
   async function readPhoto(file) {
-    // 先頭部分だけ読んで EXIF を高速に取得
-    const head = await file.slice(0, 256 * 1024).arrayBuffer();
-    const { date } = getExifData(head);
-    const parsed = parseExifDateString(date);
+    // 先頭部分だけ読んで EXIF を高速に取得(失敗してもファイル日時で継続)
+    let dateStr = null;
+    try {
+      const head = await file.slice(0, 256 * 1024).arrayBuffer();
+      dateStr = getExifData(head).date;
+    } catch (_) {
+      /* EXIF 読めず → ファイル日時にフォールバック */
+    }
+    const parsed = parseExifDateString(dateStr);
     const usedExif = !!parsed;
-    const taken = parsed || new Date(file.lastModified);
+    const taken = parsed || new Date(file.lastModified || Date.now());
     const thumb = await makeThumbnail(file);
     if (!thumb) return null;
     return { date: taken, name: file.name, thumb, file, usedExif };
   }
 
-  // <img> 経由で EXIF orientation を自動適用 → canvas に縮小描画
+  // 画像ソースを縮小して JPEG データURLに変換
+  function scaleToDataURL(source, w0, h0) {
+    const scale = Math.min(1, THUMB_MAX / Math.max(w0, h0));
+    const w = Math.max(1, Math.round(w0 * scale));
+    const h = Math.max(1, Math.round(h0 * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d").drawImage(source, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  }
+
+  // createImageBitmap でのフォールバック(<img> が使えない/固まる場合)
+  async function thumbViaBitmap(file) {
+    if (!window.createImageBitmap) return null;
+    let bmp = null;
+    try {
+      try {
+        bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+      } catch (_) {
+        bmp = await createImageBitmap(file); // 古い Safari 用
+      }
+      return scaleToDataURL(bmp, bmp.width, bmp.height);
+    } catch (_) {
+      return null;
+    } finally {
+      if (bmp && bmp.close) bmp.close();
+    }
+  }
+
+  // サムネイル生成。<img>(Safari は HEIC・EXIF回転を自動処理)を優先し、
+  // 失敗またはタイムアウト時は createImageBitmap にフォールバック。
   function makeThumbnail(file) {
     return new Promise((resolve) => {
       const url = URL.createObjectURL(file);
+      let settled = false;
       const img = new Image();
-      img.onload = () => {
-        const { naturalWidth: w0, naturalHeight: h0 } = img;
-        const scale = Math.min(1, THUMB_MAX / Math.max(w0, h0));
-        const w = Math.max(1, Math.round(w0 * scale));
-        const h = Math.max(1, Math.round(h0 * scale));
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+
+      const finish = (val) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
         URL.revokeObjectURL(url);
+        resolve(val);
+      };
+      const fallback = async () => {
+        if (settled) return;
+        const data = await thumbViaBitmap(file);
+        finish(data);
+      };
+
+      // 巨大画像で固まった場合の保険(12秒)
+      const timer = setTimeout(fallback, 12000);
+
+      img.onload = () => {
         try {
-          resolve(canvas.toDataURL("image/jpeg", 0.82));
+          finish(scaleToDataURL(img, img.naturalWidth, img.naturalHeight));
         } catch (_) {
-          resolve(null);
+          fallback();
         }
       };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(null); // HEIC など描画できない形式
-      };
+      img.onerror = fallback;
       img.src = url;
     });
+  }
+
+  function showNotice(msg) {
+    const el = $("notice");
+    if (!el) return;
+    el.textContent = msg || "";
+    el.classList.toggle("hidden", !msg);
   }
 
   // ---- グループ化 & 再描画 ----
