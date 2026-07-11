@@ -1,0 +1,3 @@
+Pillow>=10.0
+# HEIC/HEIF (iPhone写真) を読む場合に必要。任意。
+pillow-heif>=0.13

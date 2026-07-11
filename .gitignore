@@ -1,0 +1,10 @@
+# 生成物
+calendar_out/
+*.pyc
+__pycache__/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
