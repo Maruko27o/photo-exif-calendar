@@ -520,11 +520,6 @@ if (typeof document !== "undefined") {
     const [y, m] = state.current.split("-").map(Number);
     const days = state.grouped.get(state.current);
 
-    const items = [];
-    [...days.keys()].sort((a, b) => a - b).forEach((d) => {
-      days.get(d).forEach((p) => items.push({ p, d }));
-    });
-
     $("poster-en").textContent = `${EN_MONTH[m - 1]} ${y}`;
     $("poster-jp").textContent = `${y}年 ${m}月`;
 
@@ -533,17 +528,39 @@ if (typeof document !== "undefined") {
 
     const grid = $("poster-grid");
     grid.innerHTML = "";
-    items.forEach(({ p, d }, i) => {
-      const url = URL.createObjectURL(p.file);
-      posterUrls.push(url);
-      const fig = document.createElement("figure");
-      fig.className = "pframe";
-      fig.style.setProperty("--rot", `${(seeded(i) * 6 - 3).toFixed(2)}deg`);
-      fig.innerHTML =
-        `<div class="pph"><img src="${url}" alt=""></div>` +
-        `<figcaption>${m}/${d}</figcaption>`;
-      grid.appendChild(fig);
+
+    // 曜日ヘッダー(月〜日)
+    WEEKDAYS.forEach((w, i) => {
+      const h = document.createElement("div");
+      h.className = "pcal-head" + (i === 5 ? " sat" : i === 6 ? " sun" : "");
+      h.textContent = w;
+      grid.appendChild(h);
     });
+
+    // 週ごとに7日を横並び
+    for (const week of monthMatrix(y, m)) {
+      week.forEach((day, i) => {
+        const cell = document.createElement("div");
+        cell.className =
+          "pcal-cell" + (day === 0 ? " empty" : i === 5 ? " sat" : i === 6 ? " sun" : "");
+        if (day !== 0) {
+          const dl = document.createElement("div");
+          dl.className = "pcal-day";
+          dl.textContent = day;
+          cell.appendChild(dl);
+          (days.get(day) || []).forEach((p, idx) => {
+            const url = URL.createObjectURL(p.file);
+            posterUrls.push(url);
+            const fig = document.createElement("figure");
+            fig.className = "pframe";
+            fig.style.setProperty("--rot", `${(seeded(day * 7 + idx) * 5 - 2.5).toFixed(2)}deg`);
+            fig.innerHTML = `<div class="pph"><img src="${url}" alt=""></div>`;
+            cell.appendChild(fig);
+          });
+        }
+        grid.appendChild(cell);
+      });
+    }
 
     $("poster").classList.add("show");
   }
