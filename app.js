@@ -141,7 +141,7 @@ if (typeof document !== "undefined") {
     $("export-btn").addEventListener("click", exportHtml);
     $("poster-btn").addEventListener("click", openPoster);
     $("poster-close").addEventListener("click", closePoster);
-    $("poster-print").addEventListener("click", () => window.print());
+    $("poster-save").addEventListener("click", savePoster);
     document.querySelectorAll(".theme-btn").forEach((b) =>
       b.addEventListener("click", () => setPosterTheme(b.dataset.theme, b))
     );
@@ -520,8 +520,9 @@ if (typeof document !== "undefined") {
     );
   }
 
-  // ---- ポスター(思い出・印刷用) ----
+  // ---- ポスター(思い出・写真保存用) ----
   let posterUrls = [];
+  let posterTheme = "polaroid";
 
   // 決定的な擬似乱数(写真ごとに一定の傾き)
   function seeded(i) {
@@ -580,6 +581,7 @@ if (typeof document !== "undefined") {
   }
 
   function setPosterTheme(theme, btn) {
+    posterTheme = theme;
     const sheet = $("poster-sheet");
     sheet.className = `poster-sheet theme-${theme}`;
     document.querySelectorAll(".theme-btn").forEach((b) => b.classList.remove("active"));
@@ -591,6 +593,228 @@ if (typeof document !== "undefined") {
     posterUrls.forEach((u) => URL.revokeObjectURL(u));
     posterUrls = [];
     $("poster-grid").innerHTML = "";
+  }
+
+  // ---- ポスターを画像化して「写真」アプリに保存 ----
+  const POSTER_THEMES = {
+    polaroid: {
+      bg: "#f4ead8", title: "#b06a52", sub: "#8a7563", rule: "#c9a27f", head: "#a07a5c",
+      frame: "#ffffff", frameShadow: "rgba(90,74,58,0.30)", foot: "#b06a52",
+      titleFont: 'italic 700 {S}px Georgia, "Times New Roman", serif', footText: "♥ our memories",
+      footFont: 'italic 500 26px Georgia, serif', tilt: true,
+    },
+    film: {
+      bg: "#14151a", title: "#f2c14e", sub: "#aab2c0", rule: "#f2c14e", head: "#aab2c0",
+      frame: "#000000", frameShadow: "rgba(0,0,0,0.6)", frameBorder: "#333333", foot: "#f2c14e",
+      titleFont: 'italic 700 {S}px Georgia, serif', footText: "♥ our memories",
+      footFont: 'italic 500 26px Georgia, serif', film: true, tilt: true,
+    },
+    modern: {
+      bg: "#ffffff", title: "#1f2430", sub: "#8a92a0", rule: "#1f2430", head: "#8a92a0",
+      frame: "#ffffff", frameShadow: "rgba(0,0,0,0.14)", foot: "#b3b9c4",
+      titleFont: '300 {S}px "Helvetica Neue", Arial, sans-serif', footText: "OUR MEMORIES",
+      footFont: '600 20px "Helvetica Neue", Arial, sans-serif', tilt: false,
+    },
+  };
+  const SAT = "#2563eb";
+  const SUN = "#dc2626";
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // object-fit: cover 相当で正方形に描画
+  function drawCover(ctx, img, x, y, side) {
+    const s = Math.min(img.naturalWidth, img.naturalHeight);
+    const sx = (img.naturalWidth - s) / 2;
+    const sy = (img.naturalHeight - s) / 2;
+    ctx.drawImage(img, sx, sy, s, s, x, y, side, side);
+  }
+
+  function loadImage(file) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => resolve({ img, url });
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  // ポスターを高解像度の canvas に描画して返す
+  async function renderPosterImage() {
+    const T = POSTER_THEMES[posterTheme] || POSTER_THEMES.polaroid;
+    const [y, m] = state.current.split("-").map(Number);
+    const days = state.grouped.get(state.current);
+    const weeks = monthMatrix(y, m);
+
+    const scale = 2;               // 高解像度
+    const W = 1654;                // A4 横 相当の幅
+    const margin = 70;
+    const gridW = W - margin * 2;
+    const cellW = gridW / 7;
+    const gap = 16;
+    const photoSide = Math.round(cellW - gap);
+    const framePad = Math.max(4, Math.round(photoSide * 0.05));
+    const frameW = photoSide + framePad * 2;
+    const frameH = photoSide + framePad * 3;   // 下だけ少し広くポラロイド風
+    const dayNumH = 30;
+    const rowH = dayNumH + frameH + 22;
+    const headerBlockH = 200;
+    const weekdayH = 46;
+    const footerH = 74;
+    const H = margin + headerBlockH + weekdayH + weeks.length * rowH + footerH;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W * scale;
+    canvas.height = H * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    // 背景
+    ctx.fillStyle = T.bg;
+    ctx.fillRect(0, 0, W, H);
+    if (T.film) {
+      ctx.fillStyle = "rgba(255,255,255,0.045)";
+      for (let x = margin; x < W - margin; x += cellW) ctx.fillRect(x - 1, 0, 3, H);
+    }
+
+    // タイトル
+    ctx.textAlign = "center";
+    ctx.fillStyle = T.title;
+    ctx.font = T.titleFont.replace("{S}", "68");
+    ctx.fillText(`${EN_MONTH[m - 1]} ${y}`, W / 2, margin + 74);
+    ctx.fillStyle = T.sub;
+    ctx.font = '500 26px "Hiragino Kaku Gothic ProN", sans-serif';
+    ctx.fillText(`${y}年 ${m}月`, W / 2, margin + 120);
+    ctx.strokeStyle = T.rule;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 34, margin + 150);
+    ctx.lineTo(W / 2 + 34, margin + 150);
+    ctx.stroke();
+
+    // 曜日ヘッダー
+    const gridTop = margin + headerBlockH;
+    ctx.font = '700 22px "Hiragino Kaku Gothic ProN", sans-serif';
+    for (let i = 0; i < 7; i++) {
+      ctx.fillStyle = i === 5 ? SAT : i === 6 ? SUN : T.head;
+      ctx.fillText(WEEKDAYS[i], margin + cellW * i + cellW / 2, gridTop);
+    }
+
+    // 画像を先読み
+    const jobs = [];
+    weeks.forEach((week, wi) =>
+      week.forEach((day, di) => {
+        if (day === 0) return;
+        const arr = days.get(day);
+        if (arr && arr.length) {
+          jobs.push(loadImage(arr[0].file).then((r) => (r ? { wi, di, day, ...r } : null)));
+        }
+      })
+    );
+    const loaded = (await Promise.all(jobs)).filter(Boolean);
+    const cellMap = new Map(loaded.map((o) => [`${o.wi}_${o.di}`, o]));
+
+    // マスを描画
+    for (let wi = 0; wi < weeks.length; wi++) {
+      const rowTop = gridTop + weekdayH + wi * rowH;
+      for (let di = 0; di < 7; di++) {
+        const day = weeks[wi][di];
+        if (day === 0) continue;
+        const cellX = margin + cellW * di;
+
+        ctx.textAlign = "left";
+        ctx.font = '700 20px "Hiragino Kaku Gothic ProN", sans-serif';
+        ctx.fillStyle = di === 5 ? SAT : di === 6 ? SUN : T.head;
+        ctx.globalAlpha = 0.75;
+        ctx.fillText(String(day), cellX + 4, rowTop + 20);
+        ctx.globalAlpha = 1;
+
+        const o = cellMap.get(`${wi}_${di}`);
+        if (!o) continue;
+
+        const fx = cellX + (cellW - frameW) / 2;
+        const fy = rowTop + dayNumH;
+        const rot = T.tilt ? (seeded(day * 7) * 4 - 2) * Math.PI / 180 : 0;
+
+        ctx.save();
+        ctx.translate(fx + frameW / 2, fy + frameH / 2);
+        ctx.rotate(rot);
+        ctx.shadowColor = T.frameShadow;
+        ctx.shadowBlur = 14;
+        ctx.shadowOffsetY = 5;
+        ctx.fillStyle = T.frame;
+        roundRect(ctx, -frameW / 2, -frameH / 2, frameW, frameH, 4);
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+        const px = -frameW / 2 + framePad;
+        const py = -frameH / 2 + framePad;
+        drawCover(ctx, o.img, px, py, photoSide);
+        if (T.frameBorder) {
+          ctx.strokeStyle = T.frameBorder;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px, py, photoSide, photoSide);
+        }
+        ctx.restore();
+      }
+    }
+
+    // フッター
+    ctx.textAlign = "center";
+    ctx.fillStyle = T.foot;
+    ctx.font = T.footFont;
+    ctx.fillText(T.footText, W / 2, H - 34);
+
+    loaded.forEach((o) => URL.revokeObjectURL(o.url));
+    return canvas;
+  }
+
+  async function savePoster() {
+    if (!state.current) return;
+    const btn = $("poster-save");
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "作成中…";
+    try {
+      const canvas = await renderPosterImage();
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.95));
+      if (!blob) throw new Error("blob failed");
+      const [y, m] = state.current.split("-");
+      const fname = `photo-calendar-${y}-${String(m).padStart(2, "0")}.jpg`;
+      const file = new File([blob], fname, { type: "image/jpeg" });
+
+      // iOS: 共有シート →「画像を保存」で写真アプリ(カメラロール)に保存
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") return; // ユーザーがキャンセル
+          // 共有不可時はダウンロードへフォールバック
+        }
+      }
+      // フォールバック(PC など): ダウンロード保存
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (_) {
+      alert("画像の作成に失敗しました。もう一度お試しください。");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
   }
 
   function escapeHtml(s) {
