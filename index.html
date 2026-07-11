@@ -52,6 +52,7 @@
       <div class="toolbar">
         <p id="summary" class="summary"></p>
         <div class="toolbar-actions">
+          <button id="poster-btn" class="btn btn-primary">🖼️ ポスターにする</button>
           <button id="export-btn" class="btn btn-ghost">⬇︎ HTMLで保存</button>
           <button id="reset-btn" class="btn btn-ghost">✕ クリア</button>
         </div>
@@ -79,6 +80,32 @@
   <div id="lightbox" class="lightbox">
     <img id="lightbox-img" alt="">
     <p id="lightbox-cap" class="lightbox-cap"></p>
+  </div>
+
+  <!-- ポスター(思い出・印刷用) -->
+  <div id="poster" class="poster-overlay">
+    <div class="poster-bar">
+      <div class="poster-themes">
+        <button class="theme-btn active" data-theme="polaroid">ポラロイド</button>
+        <button class="theme-btn" data-theme="film">フィルム</button>
+        <button class="theme-btn" data-theme="modern">モダン</button>
+      </div>
+      <div class="poster-bar-actions">
+        <button id="poster-print" class="btn btn-primary">🖨️ 印刷 / PDFで保存</button>
+        <button id="poster-close" class="btn btn-ghost">✕ 閉じる</button>
+      </div>
+    </div>
+    <div class="poster-scroll">
+      <div id="poster-sheet" class="poster-sheet theme-polaroid">
+        <div class="poster-head">
+          <div id="poster-en" class="poster-en"></div>
+          <div id="poster-jp" class="poster-jp"></div>
+          <div class="poster-rule"></div>
+        </div>
+        <div id="poster-grid" class="poster-grid"></div>
+        <div class="poster-foot">♥ our memories</div>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

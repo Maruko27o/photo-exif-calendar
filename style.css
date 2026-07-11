@@ -101,6 +101,11 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 40px; }
 }
 .btn-ghost { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
 .btn-ghost:active { transform: scale(0.97); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+  box-shadow: 0 4px 14px rgba(91, 124, 250, 0.4);
+}
+.btn-primary:active { transform: scale(0.97); }
 
 /* 月ナビ */
 .month-nav {
@@ -182,6 +187,115 @@ td.sun .daynum { color: var(--sun); }
 .app-footer {
   text-align: center; color: var(--muted); font-size: 0.75rem;
   padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+}
+
+/* ===================== ポスター(思い出・印刷) ===================== */
+.poster-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: #2b2f38; flex-direction: column;
+}
+.poster-overlay.show { display: flex; }
+.poster-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 10px; background: #1b1e25;
+  flex-wrap: wrap;
+}
+.poster-themes { display: flex; gap: 6px; }
+.theme-btn {
+  border: 1px solid #3a3f4b; background: #262a33; color: #cdd3de;
+  border-radius: 99px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.theme-btn.active { background: #fff; color: #1b1e25; border-color: #fff; }
+.poster-bar-actions { display: flex; gap: 8px; }
+.poster-scroll {
+  flex: 1; overflow: auto; -webkit-overflow-scrolling: touch;
+  display: flex; justify-content: center; padding: 18px 12px 40px;
+}
+
+/* シート(A4比率) */
+.poster-sheet {
+  width: 100%; max-width: 780px; align-self: flex-start;
+  padding: 40px 34px 30px; border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.poster-head { text-align: center; margin-bottom: 26px; }
+.poster-en {
+  font-family: "Snell Roundhand", "Apple Chancery", "Segoe Script", cursive;
+  font-size: 2.9rem; line-height: 1;
+}
+.poster-jp { font-size: 1.05rem; letter-spacing: 4px; margin-top: 8px; }
+.poster-rule { width: 54px; height: 2px; margin: 16px auto 0; }
+.poster-grid {
+  display: flex; flex-wrap: wrap; gap: 16px 14px; justify-content: center;
+}
+.pframe {
+  margin: 0; transform: rotate(var(--rot, 0deg));
+  transition: transform 0.15s ease;
+}
+.pframe .pph { overflow: hidden; }
+.pframe img {
+  display: block; width: 150px; height: 150px; object-fit: cover;
+}
+.pframe figcaption { text-align: center; margin-top: 6px; font-size: 0.82rem; }
+.poster-foot { text-align: center; margin-top: 30px; font-size: 0.95rem; letter-spacing: 1px; }
+
+/* テーマ: ポラロイド */
+.theme-polaroid {
+  background:
+    radial-gradient(circle at 20% 15%, #fff8ee 0%, #f4ead8 60%, #ecdfca 100%);
+  color: #5b4a3a;
+}
+.theme-polaroid .poster-en { color: #b06a52; }
+.theme-polaroid .poster-jp { color: #8a7563; }
+.theme-polaroid .poster-rule { background: #c9a27f; }
+.theme-polaroid .pframe {
+  background: #fff; padding: 9px 9px 34px; border-radius: 2px;
+  box-shadow: 0 6px 16px rgba(90, 74, 58, 0.28);
+}
+.theme-polaroid .pframe figcaption {
+  font-family: "Bradley Hand", "Comic Sans MS", cursive; color: #7a6350;
+  margin-top: 10px; position: relative;
+}
+.theme-polaroid .poster-foot { color: #b06a52; font-family: "Bradley Hand", cursive; }
+
+/* テーマ: フィルム */
+.theme-film {
+  background: #14151a; color: #e9ecf2;
+  background-image: repeating-linear-gradient(90deg, transparent 0 46px, rgba(255,255,255,0.05) 46px 50px);
+}
+.theme-film .poster-en { color: #f2c14e; font-family: Georgia, serif; font-style: italic; }
+.theme-film .poster-jp { color: #aab2c0; }
+.theme-film .poster-rule { background: #f2c14e; }
+.theme-film .pframe { background: #000; padding: 6px; border-radius: 3px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
+.theme-film .pframe .pph { border: 1px solid #333; }
+.theme-film .pframe figcaption { color: #cfd6e2; font-family: Georgia, serif; }
+.theme-film .poster-foot { color: #f2c14e; font-family: Georgia, serif; font-style: italic; }
+
+/* テーマ: モダン */
+.theme-modern { background: #ffffff; color: #1f2430; }
+.theme-modern .poster-en { font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 300; letter-spacing: 2px; color: #1f2430; }
+.theme-modern .poster-jp { color: #8a92a0; }
+.theme-modern .poster-rule { background: #1f2430; }
+.theme-modern .poster-grid { gap: 10px; }
+.theme-modern .pframe { box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+.theme-modern .pframe img { width: 158px; height: 158px; }
+.theme-modern .pframe figcaption { color: #8a92a0; font-size: 0.75rem; letter-spacing: 1px; }
+.theme-modern .poster-foot { color: #b3b9c4; letter-spacing: 3px; text-transform: uppercase; font-size: 0.75rem; }
+
+/* 印刷: シートだけを A4 に */
+@media print {
+  body { background: #fff; }
+  body > *:not(#poster) { display: none !important; }
+  #poster { position: static; display: block !important; background: #fff; }
+  .poster-bar { display: none !important; }
+  .poster-scroll { display: block; overflow: visible; padding: 0; }
+  .poster-sheet {
+    max-width: none; width: 100%; box-shadow: none; border-radius: 0;
+    padding: 14mm 12mm;
+  }
+  .pframe { break-inside: avoid; }
+  @page { size: A4; margin: 8mm; }
 }
 
 .hidden { display: none !important; }

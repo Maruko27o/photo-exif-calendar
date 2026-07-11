@@ -121,6 +121,8 @@ function monthMatrix(year, month /* 1-12 */) {
 
 if (typeof document !== "undefined") {
   const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"];
+  const EN_MONTH = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
   const THUMB_MAX = 240; // サムネイル最大辺(px)
 
   const state = {
@@ -137,6 +139,12 @@ if (typeof document !== "undefined") {
     input.addEventListener("change", (e) => handleFiles(e.target.files));
     $("reset-btn").addEventListener("click", resetAll);
     $("export-btn").addEventListener("click", exportHtml);
+    $("poster-btn").addEventListener("click", openPoster);
+    $("poster-close").addEventListener("click", closePoster);
+    $("poster-print").addEventListener("click", () => window.print());
+    document.querySelectorAll(".theme-btn").forEach((b) =>
+      b.addEventListener("click", () => setPosterTheme(b.dataset.theme, b))
+    );
     $("prev-btn").addEventListener("click", () => stepMonth(-1));
     $("next-btn").addEventListener("click", () => stepMonth(1));
     $("lightbox").addEventListener("click", closeLightbox);
@@ -420,6 +428,62 @@ if (typeof document !== "undefined") {
       `<p style="color:#7b8794;font-size:.8rem">写真EXIFから生成 ・ ${new Date().toLocaleDateString("ja-JP")}</p>` +
       `</body></html>`
     );
+  }
+
+  // ---- ポスター(思い出・印刷用) ----
+  let posterUrls = [];
+
+  // 決定的な擬似乱数(写真ごとに一定の傾き)
+  function seeded(i) {
+    const x = Math.sin(i * 12.9898 + 1.3) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  function openPoster() {
+    if (!state.current) return;
+    const [y, m] = state.current.split("-").map(Number);
+    const days = state.grouped.get(state.current);
+
+    const items = [];
+    [...days.keys()].sort((a, b) => a - b).forEach((d) => {
+      days.get(d).forEach((p) => items.push({ p, d }));
+    });
+
+    $("poster-en").textContent = `${EN_MONTH[m - 1]} ${y}`;
+    $("poster-jp").textContent = `${y}年 ${m}月`;
+
+    posterUrls.forEach((u) => URL.revokeObjectURL(u));
+    posterUrls = [];
+
+    const grid = $("poster-grid");
+    grid.innerHTML = "";
+    items.forEach(({ p, d }, i) => {
+      const url = URL.createObjectURL(p.file);
+      posterUrls.push(url);
+      const fig = document.createElement("figure");
+      fig.className = "pframe";
+      fig.style.setProperty("--rot", `${(seeded(i) * 6 - 3).toFixed(2)}deg`);
+      fig.innerHTML =
+        `<div class="pph"><img src="${url}" alt=""></div>` +
+        `<figcaption>${m}/${d}</figcaption>`;
+      grid.appendChild(fig);
+    });
+
+    $("poster").classList.add("show");
+  }
+
+  function setPosterTheme(theme, btn) {
+    const sheet = $("poster-sheet");
+    sheet.className = `poster-sheet theme-${theme}`;
+    document.querySelectorAll(".theme-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+  }
+
+  function closePoster() {
+    $("poster").classList.remove("show");
+    posterUrls.forEach((u) => URL.revokeObjectURL(u));
+    posterUrls = [];
+    $("poster-grid").innerHTML = "";
   }
 
   function escapeHtml(s) {
