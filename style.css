@@ -1,0 +1,187 @@
+:root {
+  --bg: #f3f4f8;
+  --card: #ffffff;
+  --text: #1f2933;
+  --muted: #7b8794;
+  --line: #e4e7ec;
+  --accent: #5b7cfa;
+  --accent-2: #7c5cfa;
+  --sat: #2563eb;
+  --sun: #dc2626;
+  --shadow: 0 4px 16px rgba(31, 41, 51, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161c;
+    --card: #1e2129;
+    --text: #e6e8ee;
+    --muted: #8b95a5;
+    --line: #2c313c;
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", Meiryo, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ヘッダー */
+.app-header {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  padding: calc(20px + env(safe-area-inset-top)) 20px 22px;
+  text-align: center;
+}
+.app-header h1 { margin: 0; font-size: 1.4rem; letter-spacing: 0.5px; }
+.tagline { margin: 6px 0 0; font-size: 0.85rem; opacity: 0.92; }
+
+main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 40px; }
+
+/* 写真選択 */
+.picker { text-align: center; margin-bottom: 8px; }
+.pick-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--card); border: 2px dashed var(--accent);
+  border-radius: 18px; padding: 26px 20px; cursor: pointer;
+  box-shadow: var(--shadow); transition: transform 0.08s ease, background 0.2s;
+}
+.pick-btn:active { transform: scale(0.99); }
+.pick-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; font-size: 1.8rem; line-height: 52px; font-weight: 300;
+}
+.pick-label { font-size: 1.1rem; font-weight: 700; margin-top: 4px; }
+.pick-hint { font-size: 0.8rem; color: var(--muted); }
+.privacy { font-size: 0.78rem; color: var(--muted); margin: 12px 0 0; }
+
+/* 進捗 */
+.progress { margin: 18px 4px; }
+.progress-track {
+  height: 8px; background: var(--line); border-radius: 99px; overflow: hidden;
+}
+.progress-bar {
+  height: 100%; width: 0; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.2s ease;
+}
+.progress-text { font-size: 0.8rem; color: var(--muted); margin: 6px 2px 0; text-align: center; }
+
+/* 空状態 */
+.empty { margin-top: 18px; }
+.empty-card {
+  background: var(--card); border-radius: 18px; padding: 24px 22px;
+  box-shadow: var(--shadow); text-align: center;
+}
+.empty-emoji { font-size: 2.4rem; }
+.empty-card h2 { font-size: 1.05rem; margin: 8px 0 12px; }
+.empty-card ol { text-align: left; display: inline-block; margin: 0; padding-left: 20px; }
+.empty-card li { margin: 4px 0; }
+.empty-note { font-size: 0.8rem; color: var(--muted); margin: 14px 0 0; }
+
+/* 結果ツールバー */
+.result { margin-top: 14px; }
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  justify-content: space-between; margin-bottom: 12px;
+}
+.summary { font-size: 0.85rem; color: var(--muted); margin: 0; flex: 1 1 200px; }
+.toolbar-actions { display: flex; gap: 8px; }
+.btn {
+  border: none; border-radius: 10px; padding: 8px 12px; font-size: 0.82rem;
+  font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.btn-ghost { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+.btn-ghost:active { transform: scale(0.97); }
+
+/* 月ナビ */
+.month-nav {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin-bottom: 10px;
+}
+.month-title { font-size: 1.15rem; font-weight: 700; min-width: 140px; text-align: center; }
+.nav-arrow {
+  width: 38px; height: 38px; border-radius: 50%; border: none;
+  background: var(--card); color: var(--text); font-size: 1.4rem; line-height: 1;
+  box-shadow: var(--shadow); cursor: pointer;
+}
+.nav-arrow:disabled { opacity: 0.35; cursor: default; }
+
+/* 月チップ */
+.month-chips {
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.month-chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto; border: 1px solid var(--line); background: var(--card);
+  color: var(--text); border-radius: 99px; padding: 6px 14px; font-size: 0.82rem;
+  font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.chip small {
+  margin-left: 6px; background: var(--line); color: var(--muted);
+  border-radius: 99px; padding: 1px 7px; font-size: 0.72rem;
+}
+.chip.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border-color: transparent;
+}
+.chip.active small { background: rgba(255, 255, 255, 0.25); color: #fff; }
+
+/* カレンダー */
+.calendar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.calendar {
+  border-collapse: collapse; width: 100%; min-width: 320px;
+  background: var(--card); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow);
+}
+.calendar th, .calendar td { border: 1px solid var(--line); }
+.calendar th {
+  background: #334155; color: #fff; padding: 7px 0; font-size: 0.78rem; font-weight: 600;
+}
+.calendar th.sat { background: var(--sat); }
+.calendar th.sun { background: var(--sun); }
+.calendar td {
+  width: 14.28%; height: 84px; vertical-align: top; padding: 3px; position: relative;
+}
+.calendar td.empty { background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.daynum { font-size: 0.72rem; color: var(--muted); font-weight: 700; }
+td.sat .daynum { color: var(--sat); }
+td.sun .daynum { color: var(--sun); }
+.count {
+  position: absolute; top: 2px; right: 3px; font-size: 0.6rem; font-weight: 700;
+  background: var(--accent); color: #fff; border-radius: 99px; padding: 0 5px;
+}
+.thumbs { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; }
+.thumbs img {
+  width: 26px; height: 26px; object-fit: cover; border-radius: 4px;
+  border: 1px solid var(--line); cursor: pointer;
+}
+@media (min-width: 640px) {
+  .calendar td { height: 108px; }
+  .thumbs img { width: 34px; height: 34px; }
+}
+
+/* ライトボックス */
+.lightbox {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.9); flex-direction: column;
+  align-items: center; justify-content: center; padding: 20px; cursor: zoom-out;
+}
+.lightbox.show { display: flex; }
+.lightbox img { max-width: 94vw; max-height: 82vh; border-radius: 8px; }
+.lightbox-cap { color: #fff; font-size: 0.82rem; margin: 14px 0 0; text-align: center; }
+
+.app-footer {
+  text-align: center; color: var(--muted); font-size: 0.75rem;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+}
+
+.hidden { display: none !important; }
