@@ -143,8 +143,19 @@ if (typeof document !== "undefined") {
     $("poster-close").addEventListener("click", closePoster);
     $("poster-save").addEventListener("click", savePoster);
     document.querySelectorAll(".theme-btn").forEach((b) =>
-      b.addEventListener("click", () => setPosterTheme(b.dataset.theme, b))
+      b.addEventListener("click", () => setPosterTheme(b.dataset.theme))
     );
+    // 保存済みの設定(テーマ・メッセージ)を復元
+    try {
+      posterTheme = localStorage.getItem("pec_theme") || posterTheme;
+      posterMessage = localStorage.getItem("pec_message") || "";
+    } catch (_) { /* localStorage 不可でも動作 */ }
+    $("poster-msg").value = posterMessage;
+    $("poster-msg").addEventListener("input", (e) => {
+      posterMessage = e.target.value;
+      $("poster-foot").textContent = footerText();
+      try { localStorage.setItem("pec_message", posterMessage); } catch (_) {}
+    });
     $("prev-btn").addEventListener("click", () => stepMonth(-1));
     $("next-btn").addEventListener("click", () => stepMonth(1));
     $("lightbox").addEventListener("click", closeLightbox);
@@ -523,6 +534,22 @@ if (typeof document !== "undefined") {
   // ---- ポスター(思い出・写真保存用) ----
   let posterUrls = [];
   let posterTheme = "polaroid";
+  let posterMessage = "";
+
+  // フッター文言(メッセージがあれば優先、無ければテーマ既定)
+  function footerText() {
+    const msg = posterMessage.trim();
+    if (msg) return msg;
+    return posterTheme === "modern" ? "OUR MEMORIES" : "♥ our memories";
+  }
+
+  // テーマの見た目(シートのクラス・選択中ボタン)を反映
+  function applyThemeUI() {
+    $("poster-sheet").className = `poster-sheet theme-${posterTheme}`;
+    document.querySelectorAll(".theme-btn").forEach((b) =>
+      b.classList.toggle("active", b.dataset.theme === posterTheme)
+    );
+  }
 
   // 決定的な擬似乱数(写真ごとに一定の傾き)
   function seeded(i) {
@@ -535,8 +562,11 @@ if (typeof document !== "undefined") {
     const [y, m] = state.current.split("-").map(Number);
     const days = state.grouped.get(state.current);
 
+    applyThemeUI();
     $("poster-en").textContent = `${EN_MONTH[m - 1]} ${y}`;
     $("poster-jp").textContent = `${y}年 ${m}月`;
+    $("poster-count").textContent = `${countInMonth(state.current)}枚の思い出`;
+    $("poster-foot").textContent = footerText();
 
     posterUrls.forEach((u) => URL.revokeObjectURL(u));
     posterUrls = [];
@@ -580,12 +610,11 @@ if (typeof document !== "undefined") {
     $("poster").classList.add("show");
   }
 
-  function setPosterTheme(theme, btn) {
+  function setPosterTheme(theme) {
     posterTheme = theme;
-    const sheet = $("poster-sheet");
-    sheet.className = `poster-sheet theme-${theme}`;
-    document.querySelectorAll(".theme-btn").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
+    applyThemeUI();
+    $("poster-foot").textContent = footerText();
+    try { localStorage.setItem("pec_theme", theme); } catch (_) {}
   }
 
   function closePoster() {
@@ -666,7 +695,7 @@ if (typeof document !== "undefined") {
     const frameH = photoSide + framePad * 3;   // 下だけ少し広くポラロイド風
     const dayNumH = 30;
     const rowH = dayNumH + frameH + 22;
-    const headerBlockH = 200;
+    const headerBlockH = 214;
     const weekdayH = 46;
     const footerH = 74;
     const H = margin + headerBlockH + weekdayH + weeks.length * rowH + footerH;
@@ -689,15 +718,19 @@ if (typeof document !== "undefined") {
     ctx.textAlign = "center";
     ctx.fillStyle = T.title;
     ctx.font = T.titleFont.replace("{S}", "68");
-    ctx.fillText(`${EN_MONTH[m - 1]} ${y}`, W / 2, margin + 74);
+    ctx.fillText(`${EN_MONTH[m - 1]} ${y}`, W / 2, margin + 72);
     ctx.fillStyle = T.sub;
     ctx.font = '500 26px "Hiragino Kaku Gothic ProN", sans-serif';
-    ctx.fillText(`${y}年 ${m}月`, W / 2, margin + 120);
+    ctx.fillText(`${y}年 ${m}月`, W / 2, margin + 116);
+    // 思い出の枚数
+    const count = countInMonth(state.current);
+    ctx.font = '500 20px "Hiragino Kaku Gothic ProN", sans-serif';
+    ctx.fillText(`${count}枚の思い出`, W / 2, margin + 148);
     ctx.strokeStyle = T.rule;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(W / 2 - 34, margin + 150);
-    ctx.lineTo(W / 2 + 34, margin + 150);
+    ctx.moveTo(W / 2 - 34, margin + 176);
+    ctx.lineTo(W / 2 + 34, margin + 176);
     ctx.stroke();
 
     // 曜日ヘッダー
@@ -766,11 +799,22 @@ if (typeof document !== "undefined") {
       }
     }
 
-    // フッター
+    // フッター(メッセージ)
     ctx.textAlign = "center";
     ctx.fillStyle = T.foot;
-    ctx.font = T.footFont;
-    ctx.fillText(T.footText, W / 2, H - 34);
+    const foot = footerText();
+    let footSize = 30;
+    const footFamily = posterTheme === "modern"
+      ? '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif'
+      : 'Georgia, "Hiragino Mincho ProN", serif';
+    const footStyle = posterTheme === "modern" ? "600" : "italic 500";
+    // 長い文言は幅に収まるよう縮小
+    do {
+      ctx.font = `${footStyle} ${footSize}px ${footFamily}`;
+      if (ctx.measureText(foot).width <= gridW) break;
+      footSize -= 2;
+    } while (footSize > 16);
+    ctx.fillText(foot, W / 2, H - 34);
 
     loaded.forEach((o) => URL.revokeObjectURL(o.url));
     return canvas;

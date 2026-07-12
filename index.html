@@ -95,16 +95,22 @@
         <button id="poster-save" class="btn btn-primary">📷 写真に保存</button>
         <button id="poster-close" class="btn btn-ghost">✕ 閉じる</button>
       </div>
+      <label class="poster-msg-field">
+        <span class="poster-msg-icon">♥</span>
+        <input id="poster-msg" class="poster-msg-input" type="text" maxlength="40"
+               placeholder="ひとことを添える(例: ふたりの6月 / Haru &amp; Yuki)">
+      </label>
     </div>
     <div class="poster-scroll">
       <div id="poster-sheet" class="poster-sheet theme-polaroid">
         <div class="poster-head">
           <div id="poster-en" class="poster-en"></div>
           <div id="poster-jp" class="poster-jp"></div>
+          <div id="poster-count" class="poster-count"></div>
           <div class="poster-rule"></div>
         </div>
         <div id="poster-grid" class="poster-grid"></div>
-        <div class="poster-foot">♥ our memories</div>
+        <div id="poster-foot" class="poster-foot">♥ our memories</div>
       </div>
     </div>
   </div>

@@ -215,6 +215,17 @@ td.sun .daynum { color: var(--sun); }
 }
 .theme-btn.active { background: #fff; color: #1b1e25; border-color: #fff; }
 .poster-bar-actions { display: flex; gap: 8px; }
+.poster-msg-field {
+  flex: 1 1 100%; display: flex; align-items: center; gap: 8px;
+  background: #262a33; border: 1px solid #3a3f4b; border-radius: 10px;
+  padding: 4px 12px; margin-top: 2px;
+}
+.poster-msg-icon { color: #f19bb0; font-size: 0.95rem; }
+.poster-msg-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: #eef1f6; font-size: 0.9rem; font-family: inherit; padding: 6px 0;
+}
+.poster-msg-input::placeholder { color: #6b7280; }
 .poster-scroll {
   flex: 1; overflow: auto; -webkit-overflow-scrolling: touch;
   display: flex; justify-content: center; padding: 18px 12px 40px;
@@ -232,6 +243,7 @@ td.sun .daynum { color: var(--sun); }
   font-size: 2.9rem; line-height: 1;
 }
 .poster-jp { font-size: 1.05rem; letter-spacing: 4px; margin-top: 8px; }
+.poster-count { font-size: 0.78rem; letter-spacing: 2px; margin-top: 6px; opacity: 0.75; }
 .poster-rule { width: 54px; height: 2px; margin: 14px auto 0; }
 
 /* 週カレンダー: 1週間分(7日)を横に並べる */
